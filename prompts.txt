@@ -1,0 +1,67 @@
+Prompt 1 {
+Crie o README do meu projeto, ele serve para baixar um áudio de um vídeo do youtube, transcrever para um arquivo .txt e analisar com um LLM para obter as partes mais importantes, ele também gera um núvem de palavras, por enquanto não há nome decidido pro projeto, deixe claro que depende do ffmpeg para funcionar e mostre o passo a passo para instalação
+}
+
+Prompt 2 {
+    segments = pydub.AudioSegment.from_file(audio_path)
+
+    chunks = [
+        segments[i:i + chunk_length_ms] 
+        for i in range(0, len(segments), chunk_length_ms)
+    ]
+
+O que esse código faz? me explica a lógica 
+}
+
+Prompt 3 {
+            download_audio("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "static/test_audio.mp3")
+
+A função é essa: 
+def download_audio(video_url: str, output_path:str = None) -> str:
+    """
+    Downloads the audio from the given video URL using yt-dlp.
+
+    Returns:
+        str: The path to the downloaded audio file.
+    """
+
+    if output_path:
+        ydl_opts['outtmpl'] = output_path
+
+    if not video_url:
+        print("No video URL provided.")
+        return ""
+
+    video_url = format_video_url(video_url)
+
+    with YoutubeDL(ydl_opts) as ydl:
+        try:
+            ydl.download([video_url])
+            return ydl.prepare_filename(ydl.extract_info(video_url, download=False))
+        except Exception as e:
+            print(f"Error downloading: {e}")
+            return ""
+
+Por que o áudio baixa como se estivesse vazio? tem o tamanho normal mas não contém áudio de verdade
+}
+
+Prompt 4 {
+    ydl_opts é definido assim:
+ydl_opts = {
+    'format': Config.AUDIO_FORMAT,
+    'outtmpl': Config.AUDIO_DOWNLOAD_PATH,
+    'postprocessors': Config.POST_PROCESSORS,
+    'ffmpeg_location': Config.FFMPEG_PATH, 
+}
+
+E config por sua bez tem esses atributos:
+AUDIO_FORMAT: str ="bestaudio/best"
+    AUDIO_DOWNLOAD_PATH: str = f"static/audio.%(ext)s"
+    POST_PROCESSORS = [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'mp3',
+        'preferredquality': '192',
+        }]
+
+    FFMPEG_PATH: str = "/usr/bin/ffmpeg"
+}
