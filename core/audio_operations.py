@@ -9,10 +9,6 @@ ydl_opts = {
     'ffmpeg_location': Config.FFMPEG_PATH, 
 }
 
-def format_video_url(video_url: str) -> str:
-    return video_url.strip()
-
-
 def download_audio(video_url: str, output_path:str | None = None) -> str:
     """
     Downloads the audio from the given video URL using yt-dlp.
@@ -28,7 +24,7 @@ def download_audio(video_url: str, output_path:str | None = None) -> str:
         print("No video URL provided.")
         return ""
 
-    video_url = format_video_url(video_url)
+    video_url = video_url.strip()
 
     with YoutubeDL(ydl_opts) as ydl:
         try:
