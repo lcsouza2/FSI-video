@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import List
 
 @dataclass
 class Config:
@@ -19,9 +18,11 @@ class Config:
     BASE_URL = "https://api.assemblyai.com"
     AUTH_TOKEN = "b1d3b6047bc54d01a16802521c5f5c6c"
     SPEECH_MODEL = "universal"
-    DEFAULT_HEADERS: dict = {
+    DEFAULT_HEADERS = {
         "authorization": AUTH_TOKEN
     }
 
     TRANSCRIPTION_FORMAT: str = "txt"
     TRANSCRITPION_PATH: str = "static/transcript.txt"
+
+    GENAI_API_KEY: str = "AIzaSyB0fB_f5ktPvsTe7znzqxrIgQHEkcHtb1o"
