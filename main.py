@@ -1,5 +1,5 @@
 from core.audio_operations import download_audio, transcribe_audio
-from core.wordcloud import generate_from_file, generate_from_str
+from core.wordcloud_gen import generate_from_file, generate_from_str
 
 def print_menu():
     print("Options: ")
@@ -15,7 +15,7 @@ while opt != "exit":
     opt = input("Enter an option (or 'exit' to quit): ")
     opt = opt.strip().lower()
     if opt == "1":
-        download_audio(input("Url do vídeo: "))
+        download_audio(input("Url do vídeo (obrigatório!): "))
     elif opt == "2":
         transcribe_audio(audio_path=input("Arquivo de áudio: "), output_path=input("Arquivo de destino: "))
     elif opt == "3":
