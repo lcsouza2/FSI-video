@@ -6,17 +6,17 @@ Prompt 2 {
     segments = pydub.AudioSegment.from_file(audio_path)
 
     chunks = [
-        segments[i:i + chunk_length_ms] 
+        segments[i:i + chunk_length_ms]
         for i in range(0, len(segments), chunk_length_ms)
     ]
 
-O que esse código faz? me explica a lógica 
+O que esse código faz? me explica a lógica
 }
 
 Prompt 3 {
             download_audio("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "static/test_audio.mp3")
 
-A função é essa: 
+A função é essa:
 def download_audio(video_url: str, output_path:str = None) -> str:
     """
     Downloads the audio from the given video URL using yt-dlp.
@@ -51,7 +51,7 @@ ydl_opts = {
     'format': Config.AUDIO_FORMAT,
     'outtmpl': Config.AUDIO_DOWNLOAD_PATH,
     'postprocessors': Config.POST_PROCESSORS,
-    'ffmpeg_location': Config.FFMPEG_PATH, 
+    'ffmpeg_location': Config.FFMPEG_PATH,
 }
 
 E config por sua bez tem esses atributos:
@@ -65,3 +65,9 @@ AUDIO_FORMAT: str ="bestaudio/best"
 
     FFMPEG_PATH: str = "/usr/bin/ffmpeg"
 }
+
+Prompt 5 {
+    Estou desenvolvendo um projeto para baixar o áudio de um debate eleitoral, transcrever para texto, gerar nuvens de palavras do debate inteiro e de cada candidato, e análise do debate usando um modelo de IA que identifica pontos de interesse nas falas, pode gerar o front-end para eu servir esses dados e alguns mais que achar bom?
+} (
+    detalhe: eu pedi isso pro claude sonnet e ele gerou HTML CSS e JS inteiro com um prompt só, isso é absurdo tá doido, melhor modelo pra front de longe
+    )
