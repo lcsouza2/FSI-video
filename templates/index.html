@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analisador de Debates Eleitorais</title>
+    <link rel="stylesheet" href="./statics/index.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/wordcloud2.js/1.2.2/wordcloud2.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎙️ Analisador de Debates Eleitorais</h1>
+            <p>Análise inteligente de debates com IA - Transcrição, Nuvens de Palavras e Insights</p>
+        </div>
+
+        <div class="upload-section">
+            <div class="input-tabs">
+                <button class="tab-button active" onclick="switchTab('file')">📁 Arquivo Local</button>
+                <button class="tab-button" onclick="switchTab('url')">🌐 URL de Vídeo</button>
+            </div>
+
+            <div id="file-tab" class="tab-content active">
+                <div class="file-upload" onclick="document.getElementById('mediaFile').click()">
+                    <div class="upload-icon">📁</div>
+                    <h3>Enviar Arquivo de Mídia</h3>
+                    <p>Clique aqui ou arraste um arquivo (MP3, WAV, M4A, MP4, AVI, MOV)</p>
+                    <input type="file" id="mediaFile" accept="audio/*,video/*" onchange="handleFileUpload(event)">
+                </div>
+            </div>
+
+            <div id="url-tab" class="tab-content">
+                <div class="url-input-section">
+                    <div class="url-input-container">
+                        <div class="upload-icon">🎥</div>
+                        <h3>Baixar Vídeo/Áudio de URL</h3>
+                        <p>Cole o link do YouTube, Vimeo, ou outras plataformas</p>
+                        <div class="url-input-group">
+                            <input type="url" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." class="url-input">
+                            <select id="qualitySelect" class="quality-select">
+                                <option value="audio">Apenas Áudio (melhor qualidade)</option>
+                                <option value="video">Vídeo e Áudio</option>
+
+                            </select>
+                        </div>
+                        <button class="button" onclick="downloadFromUrl()" style="margin-top: 15px;">⬇️ Baixar e Processar</button>
+                    </div>
+
+                    <div class="supported-platforms">
+                        <h4>📺 Plataformas Suportadas:</h4>
+                        <div class="platform-list">
+                            <span class="platform-tag">YouTube</span>
+                            <span class="platform-tag">Vimeo</span>
+                            <span class="platform-tag">Facebook</span>
+                            <span class="platform-tag">Instagram</span>
+                            <span class="platform-tag">Twitter</span>
+                            <span class="platform-tag">TikTok</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="button" onclick="processDebate()">🔄 Processar Debate</button>
+                <button class="button" onclick="loadSampleData()">📊 Carregar Dados de Exemplo</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loading hidden">
+            <div class="spinner"></div>
+            <p id="loadingText">Processando debate... Isso pode levar alguns minutos.</p>
+            <div id="progressBar" class="progress-bar hidden">
+                <div class="progress-fill" id="progressFill"></div>
+                <span class="progress-text" id="progressText">0%</span>
+            </div>
+        </div>
+
+        <div id="results" class="hidden">
+            <div class="dashboard">
+                <div class="card">
+                    <h3>📊 Estatísticas Gerais</h3>
+                    <div class="candidate-stats">
+                        <div class="stat-item">
+                            <span class="stat-value" id="totalDuration">--</span>
+                            <span class="stat-label">Duração</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="totalWords">--</span>
+                            <span class="stat-label">Palavras</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-value" id="candidateCount">--</span>
+                            <span class="stat-label">Candidatos</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🎯 Pontos de Interesse</h3>
+                    <div id="interestPoints">
+                        <div class="keywords-list" id="keywordsList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="analysis-grid">
+                <div class="card">
+                    <h3>☁️ Nuvem de Palavras - Debate Completo</h3>
+                    <div class="wordcloud-container" id="generalWordcloud"></div>
+                </div>
+
+                <div class="card">
+                    <h3>📈 Tempo de Fala por Candidato</h3>
+                    <div class="chart-container">
+                        <canvas id="speakingTimeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>😊 Análise de Sentimento</h3>
+                    <div id="sentimentAnalysis">
+                        <div style="margin: 15px 0;">
+                            <strong>Geral:</strong>
+                            <div class="sentiment-bar">
+                                <div class="sentiment-positive" id="generalSentiment" style="width: 65%"></div>
+                            </div>
+                            <span>65% Positivo</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>🔍 Temas Mais Discutidos</h3>
+                    <div class="chart-container">
+                        <canvas id="topicsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card full-width">
+                <h3>👥 Análise por Candidato</h3>
+                <div id="candidateAnalysis"></div>
+            </div>
+
+            <div class="transcript-section">
+                <h3>📝 Transcrição Completa</h3>
+                <div class="transcript-content" id="transcriptContent">
+                    <p>A transcrição aparecerá aqui após o processamento do áudio...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="statics/index.js"></script>
+</body>
+</html>
