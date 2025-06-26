@@ -1,6 +1,7 @@
 let currentDebateData = null;
 let charts = {};
 let downloadInProgress = false;
+let selectedFile = null;
 
 function switchTab(tabName) {
     // Remove active class from all tabs
@@ -12,13 +13,68 @@ function switchTab(tabName) {
     document.getElementById(`${tabName}-tab`).classList.add('active');
 }
 
+function isValidUrl(string) {
+    try {
+        new URL(string);
+        return true;
+    } catch (_) {
+        return false;
+    }
+}
+
+function showLoading(message, showProgress = false) {
+    document.getElementById('loading').classList.remove('hidden');
+    document.getElementById('loadingText').textContent = message;
+
+    const progressBar = document.getElementById('progressBar');
+    if (showProgress) {
+        progressBar.classList.remove('hidden');
+    } else {
+        progressBar.classList.add('hidden');
+    }
+}
+
 function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
+        selectedFile = file; // Salva para processar depois
         const isVideo = file.type.startsWith('video/');
         const mediaType = isVideo ? 'vídeo' : 'áudio';
         document.querySelector('#file-tab .file-upload p').textContent = `${mediaType} selecionado: ${file.name}`;
     }
+}
+
+function processDebate() {
+    if (!selectedFile) {
+        alert('Por favor, selecione um arquivo de áudio ou vídeo primeiro.');
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    showLoading('Processando debate...', true);
+
+    fetch("http://localhost:8000/process/fromfile?", {
+        method: "POST",
+        body: formData
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Erro ao transcrever arquivo');
+        return response.json();
+    })
+    .then(data => {
+        showLoading('Transcrição concluída!', false);
+        setTimeout(() => {
+            document.getElementById('loading').classList.add('hidden');
+        }, 1500);
+
+        loadData(data)
+    })
+    .catch(error => {
+        alert(error.message || 'Erro ao transcrever arquivo');
+        document.getElementById('loading').classList.add('hidden');
+    });
 }
 
 function downloadFromUrl() {
@@ -54,6 +110,7 @@ function downloadFromUrl() {
     .then(blob => {
         // Cria um link para download do arquivo de áudio
         const downloadUrl = window.URL.createObjectURL(blob);
+        selectedFile = downloadUrl;
         const a = document.createElement('a');
         a.href = downloadUrl;
         a.download = "Audio_baixado.mp3";
@@ -66,6 +123,9 @@ function downloadFromUrl() {
         setTimeout(() => {
             document.getElementById('loading').classList.add('hidden');
         }, 1500);
+
+        showLoading('Processando debate... Isso pode tomar um bom tempo', false);
+        processDebate()
     })
     .catch(error => {
         alert(error.message || 'Erro ao baixar áudio');
@@ -73,28 +133,12 @@ function downloadFromUrl() {
     });
 }
 
-function isValidUrl(string) {
-    try {
-        new URL(string);
-        return true;
-    } catch (_) {
-        return false;
-    }
-}
+// Adicione o event listener para o botão após o DOM carregar
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('processDebate').addEventListener('click', processDebate);
+});
 
-function showLoading(message, showProgress = false) {
-    document.getElementById('loading').classList.remove('hidden');
-    document.getElementById('loadingText').textContent = message;
-
-    const progressBar = document.getElementById('progressBar');
-    if (showProgress) {
-        progressBar.classList.remove('hidden');
-    } else {
-        progressBar.classList.add('hidden');
-    }
-}
-
-function loadData() {
+function loadData(data) {
     currentDebateData = {
         duration: "45:30",
         totalWords: 8432,
@@ -116,31 +160,6 @@ function loadData() {
                 wordcloud: generateWordcloudData("trabalho moradia transporte meio ambiente sustentabilidade")
             }
         ],
-        transcript: `
-<div class="speaker-name">Mediador:</div>
-Boa noite e bem-vindos ao debate eleitoral. Vamos começar com o primeiro bloco sobre economia.
-
-<div class="speaker-name">Candidato A:</div>
-Obrigado. Nosso plano econômico foca no desenvolvimento sustentável, com investimentos em saúde e educação como pilares fundamentais para o crescimento...
-
-<div class="speaker-name">Candidato B:</div>
-Respeitosamente, discordo. O que precisamos é de políticas concretas para geração de empregos, moradia popular e melhoria do transporte público...
-`,
-        interestPoints: [
-            "Proposta de reforma tributária",
-            "Debate sobre sistema de saúde",
-            "Discussão sobre segurança pública",
-            "Políticas para juventude",
-            "Sustentabilidade ambiental"
-        ],
-        topics: {
-            "Economia": 28,
-            "Saúde": 22,
-            "Educação": 20,
-            "Segurança": 15,
-            "Meio Ambiente": 10,
-            "Outros": 5
-        }
     };
 
     displayResults();
@@ -177,36 +196,6 @@ function displayResults() {
     document.getElementById('transcriptContent').innerHTML = currentDebateData.transcript;
 }
 
-function generateWordcloudData(text) {
-    const words = text.split(' ');
-    return words.map(word => [word, Math.floor(Math.random() * 50) + 10]);
-}
-
-function generateGeneralWordcloud() {
-    const words = [
-        ['economia', 45], ['saúde', 40], ['educação', 38], ['segurança', 35],
-        ['trabalho', 32], ['moradia', 28], ['transporte', 25], ['tecnologia', 22],
-        ['meio ambiente', 20], ['juventude', 18], ['cultura', 15], ['inovação', 12]
-    ];
-    return words;
-}
-
-function createWordcloud(containerId, data) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = '';
-
-    // Criar representação visual simples da nuvem de palavras
-    data.forEach(([word, weight]) => {
-        const span = document.createElement('span');
-        span.textContent = word;
-        span.style.fontSize = `${Math.max(weight / 3, 12)}px`;
-        span.style.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
-        span.style.margin = '5px';
-        span.style.display = 'inline-block';
-        span.style.fontWeight = weight > 30 ? 'bold' : 'normal';
-        container.appendChild(span);
-    });
-}
 
 function createSpeakingTimeChart() {
     const ctx = document.getElementById('speakingTimeChart').getContext('2d');
