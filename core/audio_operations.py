@@ -1,110 +1,53 @@
 from yt_dlp import YoutubeDL
 from core.config import Config
-import requests
-import time
+from http.client import BAD_REQUEST
+from fastapi import HTTPException
+import os
+import uuid
 
-ydl_opts = {
-    'format': Config.AUDIO_FORMAT,
-    'outtmpl': Config.AUDIO_DOWNLOAD_PATH,
-    'postprocessors': Config.POST_PROCESSORS,
-    'ffmpeg_location': Config.FFMPEG_PATH,
-}
-
-def download_audio(video_url: str, output_path:str | None = None) -> str:
-    """
-    Downloads the audio from the given video URL using yt-dlp.
-
-    Returns:
-        str: The path to the downloaded audio file.
-    """
-
-    if output_path:
-        ydl_opts['outtmpl'] = output_path
-
-    if not video_url:
-        print("No video URL provided.")
-        return ""
-
-    print("Formatando URL do vídeo...\n")
-    video_url = video_url.strip()
-    print("Sucesso\n")
-
-    with YoutubeDL(ydl_opts) as ydl:
-        try:
-            print("Baixando vídeo...\n")
-            ydl.download([video_url])
-            return ydl.prepare_filename(ydl.extract_info(video_url, download=False))
-        except Exception as e:
-            print(f"Error downloading: {e}")
-            return ""
-
-def upload_audio_file_to_model(
-    audio_path: str = Config.AUDIO_DOWNLOAD_PATH,
-):
-    """Simply opens a file and send it"""
-
-    with open(audio_path, "rb") as file:
-        response = requests.post(
-            Config.BASE_URL + "/v2/upload",
-            headers=Config.DEFAULT_HEADERS,
-            data=file
-            )
-
-        return response.json()["upload_url"]
-
-    raise Exception("Erro enviando arquivo para o LLM")
-
-def send_process_status_request(audio_url: str):
-    """Sends a POST request and gets transcript_id from response"""
-
-    data = {
-        "audio_url": audio_url,
-        "speech_model": Config.SPEECH_MODEL,
-        "speaker_labels": True
-    }
-
-    full_url = Config.BASE_URL + "/v2/transcript"
-
-    response = requests.post(full_url, json=data, headers=Config.DEFAULT_HEADERS)
-
-    return response.json()['id'] if not None else "Erro buscando ID da transcrição"
+DOWNLOAD_DIR = "./downloads"
+os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 
-def transcribe_audio(
-        audio_path: str = Config.AUDIO_DOWNLOAD_PATH,
-        output_path: str = Config.TRANSCRITPION_PATH
-        ) -> str:
-    """Transcribes the audio file using AssemblyAI."""
+class Video:
+    def __init__(self, url: str, mode: str = "audio"):
+        if not url:
+            raise HTTPException(BAD_REQUEST, "Url do vídeo não recebida")
 
-    audio_url = upload_audio_file_to_model(audio_path=audio_path)
+        self.url = url.strip()
+        self.id = str(uuid.uuid4())
+        self.mode = mode
 
-    process_id = send_process_status_request(audio_url=audio_url)
+    def get_ydl_opts(self):
+        if self.mode not in ("audio", "video"):
+            raise HTTPException(400, "Formato inválido, tente um áudio ou vídeo")
 
-    polling_endpoint = Config.BASE_URL + "/v2/transcript/" + process_id
+        if self.mode == "audio":
+            return {
+                "format": Config.AUDIO_FORMAT,
+                "outtmpl": os.path.join(DOWNLOAD_DIR, f"audio/{self.id}.%(ext)s"),
+                "postprocessors": Config.POST_PROCESSORS,
+                "ffmpeg_location": Config.FFMPEG_PATH,
+            }
 
-    while True:
-        transcription_result = requests.get(polling_endpoint, headers=Config.DEFAULT_HEADERS).json()
-        transcript_text = transcription_result['text']
+        return {
+            "format": Config.VIDEO_FORMAT,
+            "outtmpl": os.path.join(DOWNLOAD_DIR, f"video/{self.id}.%(ext)s"),
+        }
 
-        if transcription_result['status'] == 'completed':
-            with open(output_path if None else Config.TRANSCRITPION_PATH , 'w', encoding='utf-8') as f:
-                f.write(transcript_text)
-            break
+    def download_audio(self) -> str:
+        with YoutubeDL(self.get_ydl_opts()) as ydl:
+            info = ydl.extract_info(self.url, download=True)
+            return self.process_filename(ydl.prepare_filename(info))
 
-        elif transcription_result['status'] == 'error':
-            raise RuntimeError(f"Transcription failed: {transcription_result['error']}")
+    def download_video(self) -> str:
+        with YoutubeDL(self.get_ydl_opts()) as ydl:
+            info = ydl.extract_info(self.url, download=True)
+            return ydl.prepare_filename(info)
 
-        else:
-            time.sleep(3)
-
-
-
-
-
-
-
-
-
-
-
-
+    def process_filename(self, filename: str) -> str:
+        return (
+            filename.replace(".webm", ".mp3")
+            .replace(".m4a", ".mp3")
+            .replace(".opus", ".mp3")
+        )
