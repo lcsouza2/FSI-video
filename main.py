@@ -1,10 +1,14 @@
-from core.audio_operations import Video
-from fastapi import FastAPI, Request, Query, HTTPException
+from core.download import Video
+from fastapi import FastAPI, Request, Query, HTTPException, File, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 import os
+import tempfile
+import shutil
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+import json
+from core.transcribe import assign_speakers_to_segments, transcribe_audio, recognize_speakers
 
 MAIN_APP = FastAPI()
 MAIN_APP.mount("/statics", StaticFiles(directory="./templates/statics"), "static")
@@ -49,3 +53,31 @@ async def return_downloaded_video(url: str = Query()):
         raise HTTPException(500, "Erro buscando arquivo baixado")
 
     return FileResponse(path=file, filename="Audio_baixado")
+
+
+@MAIN_APP.post("/process/fromfile")
+async def process_from_file(
+    file: UploadFile = File(...)
+    ):
+
+    suffix = os.path.splitext(file.filename)[1]
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = tmp.name
+
+
+    #Commented to use default data for testing
+    # transcript = transcribe_audio(tmp_path)
+    # diarization = recognize_speakers(tmp_path)
+
+    #Default data:
+    with open("./pyannote.json", "r") as file:
+        transcript = json.load(file)
+
+    with open("./whisper.json", "r") as file:
+        diarization = json.load(file)
+
+    assign_speakers_to_segments(transcript, diarization)
+
+    return (transcript, diarization)
