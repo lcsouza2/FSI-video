@@ -371,27 +371,6 @@ body {
     display: none;
 }
 
-.sentiment-bar {
-    height: 30px;
-    border-radius: 15px;
-    background: #ecf0f1;
-    overflow: hidden;
-    margin: 10px 0;
-    position: relative;
-}
-
-.sentiment-positive {
-    background: linear-gradient(90deg, #2ecc71, #27ae60);
-    height: 100%;
-    transition: width 0.3s ease;
-}
-
-.sentiment-negative {
-    background: linear-gradient(90deg, #e74c3c, #c0392b);
-    height: 100%;
-    transition: width 0.3s ease;
-}
-
 .chart-container {
     position: relative;
     height: 300px;

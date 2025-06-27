@@ -59,22 +59,25 @@ function processDebate() {
         method: "POST",
         body: formData
     })
-    .then(response => {
-        if (!response.ok) throw new Error('Erro ao transcrever arquivo');
-        return response.json();
-    })
-    .then(data => {
-        showLoading('Transcrição concluída!', false);
-        setTimeout(() => {
-            document.getElementById('loading').classList.add('hidden');
-        }, 1500);
+        .then(response => {
+            if (!response.ok) throw new Error('Erro ao transcrever arquivo');
+            return response.json();
+        })
+        .then(data => {
+            showLoading('Transcrição concluída!', false);
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+            }, 1500);
 
-        loadData(data)
-    })
-    .catch(error => {
-        alert(error.message || 'Erro ao transcrever arquivo');
-        document.getElementById('loading').classList.add('hidden');
-    });
+            currentDebateData = data;
+            displayResults();
+
+        })
+        .catch(error => {
+            alert(error.message || 'Erro ao transcrever arquivo');
+            document.getElementById('loading').classList.add('hidden');
+        });
+
 }
 
 function downloadFromUrl() {
@@ -103,97 +106,70 @@ function downloadFromUrl() {
     fetch(endpoint, {
         method: "POST"
     })
-    .then(response => {
-        if (!response.ok) throw new Error('Erro ao baixar áudio');
-        return response.blob();
-    })
-    .then(blob => {
-        // Cria um link para download do arquivo de áudio
-        const downloadUrl = window.URL.createObjectURL(blob);
-        selectedFile = downloadUrl;
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = "Audio_baixado.mp3";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        window.URL.revokeObjectURL(downloadUrl);
+        .then(response => {
+            if (!response.ok) throw new Error('Erro ao baixar áudio');
+            return response.blob();
+        })
+        .then(blob => {
+            // Cria um link para download do arquivo de áudio
+            const downloadUrl = window.URL.createObjectURL(blob);
+            selectedFile = downloadUrl;
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = "Audio_baixado.mp3";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(downloadUrl);
 
-        showLoading('Áudio baixado com sucesso!', false);
-        setTimeout(() => {
+            showLoading('Áudio baixado com sucesso!', false);
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+            }, 1500);
+
+            showLoading('Processando debate... Isso pode tomar um bom tempo', false);
+            processDebate()
+        })
+        .catch(error => {
+            alert(error.message || 'Erro ao baixar áudio');
             document.getElementById('loading').classList.add('hidden');
-        }, 1500);
-
-        showLoading('Processando debate... Isso pode tomar um bom tempo', false);
-        processDebate()
-    })
-    .catch(error => {
-        alert(error.message || 'Erro ao baixar áudio');
-        document.getElementById('loading').classList.add('hidden');
-    });
+        });
 }
 
-// Adicione o event listener para o botão após o DOM carregar
-document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('processDebate').addEventListener('click', processDebate);
-});
-
-function loadData(data) {
-    currentDebateData = {
-        duration: "45:30",
-        totalWords: 8432,
-        candidates: [
-            {
-                name: "Candidato A",
-                speakingTime: 1250,
-                wordCount: 3200,
-                sentiment: 0.7,
-                keywords: ["economia", "saúde", "educação", "segurança"],
-                wordcloud: generateWordcloudData("economia saúde educação segurança desenvolvimento social política")
-            },
-            {
-                name: "Candidato B",
-                speakingTime: 1180,
-                wordCount: 2950,
-                sentiment: 0.6,
-                keywords: ["trabalho", "moradia", "transporte", "meio ambiente"],
-                wordcloud: generateWordcloudData("trabalho moradia transporte meio ambiente sustentabilidade")
-            }
-        ],
-    };
-
-    displayResults();
+function formatDuration(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    return [
+        h > 0 ? h.toString().padStart(2, '0') : '00',
+        m.toString().padStart(2, '0'),
+        s.toString().padStart(2, '0')
+    ].join(':');
 }
 
 function displayResults() {
     document.getElementById('results').classList.remove('hidden');
 
-    // Estatísticas gerais
-    document.getElementById('totalDuration').textContent = currentDebateData.duration;
-    document.getElementById('totalWords').textContent = currentDebateData.totalWords.toLocaleString();
-    document.getElementById('candidateCount').textContent = currentDebateData.candidates.length;
 
-    // Pontos de interesse
-    const keywordsList = document.getElementById('keywordsList');
-    keywordsList.innerHTML = '';
-    currentDebateData.interestPoints.forEach(point => {
-        const tag = document.createElement('div');
-        tag.className = 'keyword-tag';
-        tag.textContent = point;
-        keywordsList.appendChild(tag);
-    });
+    document.getElementById('totalDuration').textContent = formatDuration(currentDebateData.duration);
+    document.getElementById('totalWords').textContent = currentDebateData.total_words.toLocaleString();
+    document.getElementById('MostUsedWord').textContent = currentDebateData.most_used_word;
 
-    // Nuvem de palavras geral
-    createWordcloud('generalWordcloud', generateGeneralWordcloud());
-
-    // Gráfico de tempo de fala
     createSpeakingTimeChart();
 
-    // Análise por candidato
     createCandidateAnalysis();
 
-    // Transcrição
-    document.getElementById('transcriptContent').innerHTML = currentDebateData.transcript;
+    currentDebateData.interest_points.forEach((point, index) => {
+        const pointDiv = document.createElement('div');
+        pointDiv.className = 'interest-point';
+        pointDiv.innerHTML = `
+            <strong>Ponto de Interesse ${index + 1}:</strong> ${point}
+        `;
+        document.getElementById('interestPoints').appendChild(pointDiv);
+    });
+
+    document.getElementById('generalWordcloudImage').src = "http://localhost:8000/wordcloud?filename=" + encodeURIComponent(currentDebateData.wordcloud);
+    document.getElementById('transcriptContent').innerText = currentDebateData.result;
 }
 
 
@@ -204,12 +180,12 @@ function createSpeakingTimeChart() {
         charts.speakingTime.destroy();
     }
 
-    charts.speakingTime = new Chart(ctx, {
+    new Chart(ctx, {
         type: 'doughnut',
         data: {
             labels: currentDebateData.candidates.map(c => c.name),
             datasets: [{
-                data: currentDebateData.candidates.map(c => c.speakingTime),
+                data: currentDebateData.candidates.map(c => c.total_time),
                 backgroundColor: ['#667eea', '#764ba2', '#f093fb'],
                 borderWidth: 0
             }]
@@ -240,31 +216,43 @@ function createCandidateAnalysis() {
 
         candidateDiv.innerHTML = `
 <h4 style="color: #2c3e50; margin-bottom: 15px; font-size: 1.3rem;">${candidate.name}</h4>
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
-    <div>
-        <strong>Tempo de fala:</strong> ${Math.floor(candidate.speakingTime / 60)}:${(candidate.speakingTime % 60).toString().padStart(2, '0')}
-        <br><strong>Palavras:</strong> ${candidate.wordCount.toLocaleString()}
-        <br><strong>Sentimento:</strong> ${(candidate.sentiment * 100).toFixed(0)}% Positivo
-    </div>
-    <div>
-        <strong>Palavras-chave:</strong>
-        <div style="margin-top: 10px;">
-            ${candidate.keywords.map(keyword =>
-            `<span style="background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; margin-right: 5px; display: inline-block; margin-bottom: 5px;">${keyword}</span>`
-        ).join('')}
+    <div class="grid"  style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+
+        <div class="column-1">
+            <div class="d-flex flex-column justify-content-between align-items-start gap-4 text-size-6">
+                <div>
+                    <strong>Tempo de fala:</strong> ${formatDuration(candidate.total_time)}
+                    <br>
+                </div>
+
+                <div>
+                    <strong>Palavras:</strong> ${candidate.word_count.toLocaleString()}
+                    <br>
+                </div>
+
+                <div>
+                    <strong>Palavra mais dita:</strong>
+                    <br>${candidate.most_used_word.toLocaleString()}
+                </div>
+            </div>
         </div>
-    </div>
-    <div>
-        <strong>Nuvem de palavras:</strong>
-        <div id="candidate-wordcloud-${index}" style="height: 100px; border: 1px solid #ddd; border-radius: 10px; padding: 10px; margin-top: 10px; background: white;"></div>
-    </div>
-</div>
+
+        <div class="column-2 d-flex flex-column align-items-center">
+            <strong>Nuvem de palavras:</strong>
+                <img class="image-fluid" id="candidate-wordcloud-${index}"
+                    src="http://localhost:8000/wordcloud?filename=${encodeURIComponent(candidate.wordcloud)}"
+                    style="max-height: 20vh; border: 1px solid #ddd; border-radius: 10px; padding: 10px; margin-top: 10px; background: white;">
+        </div>
+
+        <div class="column-3">
+            <strong>Todas as falas</strong>
+            <div
+                style="max-height: 150px; overflow-y: auto; border: 1px solid #ddd; border-radius: 10px; padding: 10px; background: #fff;">
+                ${candidate.full_text.map(speech => `<p>${speech}</p>`).join('')}
+            </div>
+        </div>
 `;
-
         container.appendChild(candidateDiv);
-
-        // Criar nuvem de palavras do candidato
-        createWordcloud(`candidate-wordcloud-${index}`, candidate.wordcloud);
     });
 }
 
@@ -309,19 +297,6 @@ document.addEventListener('DOMContentLoaded', function () {
             this.style.borderColor = '#27ae60';
         } else {
             this.style.borderColor = '#e3f2fd';
-        }
-    });
-
-    // Detectar tipo de plataforma e sugerir qualidade
-    urlInput.addEventListener('blur', function () {
-        const url = this.value.trim();
-        const qualitySelect = document.getElementById('qualitySelect');
-
-        if (url.includes('youtube.com') || url.includes('youtu.be')) {
-            // Para YouTube, sugerir qualidade baseada no tipo de conteúdo
-            if (url.includes('podcast') || url.includes('entrevista') || url.includes('debate')) {
-                qualitySelect.value = 'audio';
-            }
         }
     });
 });
