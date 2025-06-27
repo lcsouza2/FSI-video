@@ -1,5 +1,8 @@
 from datetime import timedelta
 from pyannote.core import Segment
+from core.config import Config
+from google.genai import types
+from google import genai
 
 def assign_speakers_to_transcript(whisper_result, diarization):
     diarized_transcript = []
@@ -29,3 +32,43 @@ def assign_speakers_to_transcript(whisper_result, diarization):
         })
 
     return diarized_transcript
+
+def get_total_time(diarized_transcript):
+    total_time = timedelta()
+    for segment in diarized_transcript:
+        start = segment["start"]
+        end = segment["end"]
+        total_time += timedelta(seconds=end - start)
+    return total_time
+
+def remove_stop_words(text):
+    client = genai.Client(api_key=Config.GENAI_API_KEY)
+
+    result = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=[
+        "Can you remove stop words, articles, commas, dots and etc from the following text please? return only the text: " + text
+        ],
+        config=types.GenerateContentConfig(
+            candidate_count=1,
+            stop_sequences=[]
+        )
+    )
+
+    return result.candidates[0].content.parts[0].text
+
+def get_interest_points(text):
+    client = genai.Client(api_key=Config.GENAI_API_KEY)
+
+    result = client.models.generate_content(
+        model="gemini-2.5-flash",
+        contents=[
+        "Can you get interest points from this text? return like @point: ...;" + text
+        ],
+        config=types.GenerateContentConfig(
+            candidate_count=1,
+            stop_sequences=[]
+        )
+    )
+
+    return result.candidates[0].content.parts[0].text
