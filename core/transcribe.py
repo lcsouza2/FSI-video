@@ -1,9 +1,9 @@
 import whisper
 from pyannote.audio import Pipeline
-from utils import timestamp_to_seconds
+from core.config import Config
+from .utils import timestamp_to_seconds
 from typing import List, Dict
 import re
-import json
 
 def transcribe_audio(file):
     model = whisper.load_model("base")
@@ -13,7 +13,7 @@ def transcribe_audio(file):
 def recognize_speakers(file):
     pipeline = Pipeline.from_pretrained(
         "pyannote/speaker-diarization@2.1",
-        use_auth_token="tá no drive olha lá"
+        use_auth_token=Config.HF_KEY
     )
     diarization = pipeline(file)
 
@@ -36,8 +36,8 @@ def recognize_speakers(file):
     return result
 
 def assign_speakers_to_segments(
-    whisper_segments: List[Dict],
-    diarized_segments: List[Dict]
+    whisper_segments,
+    diarized_segments
     ) -> List[Dict]:
 
     final_output = []
@@ -75,5 +75,3 @@ def assign_speakers_to_segments(
 
     return final_output
 
-
-print(assign_speakers_to_segments())
