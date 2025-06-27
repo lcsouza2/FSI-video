@@ -1,5 +1,8 @@
 from dataclasses import dataclass
+from dotenv import load_dotenv
+from os import getenv
 
+load_dotenv(".env")
 
 @dataclass
 class Config:
@@ -16,4 +19,5 @@ class Config:
 
     FFMPEG_PATH: str = "/usr/bin/ffmpeg"  # Adjust this path to your ffmpeg installation
 
-    GENAI_API_KEY: str = "AIzaSyB0fB_f5ktPvsTe7znzqxrIgQHEkcHtb1o"
+    GENAI_API_KEY: str = getenv("GENAI_KEY")
+    HF_KEY: str = getenv("HF_KEY")
